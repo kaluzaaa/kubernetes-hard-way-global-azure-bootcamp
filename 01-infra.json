@@ -6,23 +6,63 @@
             "type": "string",
             "defaultValue": "[resourceGroup().location]"
         },
-        "sshKey":
-        {
+        "sshKey": {
             "type": "string"
+        },
+        "builtInRoleType": {
+            "type": "string",
+            "defaultValue": "Contributor"
         }
     },
     "variables": {
         "location": "[parameters('location')]",
-        "sshKey" : "[concat(parameters('sshKey'),'\n')]",
+        "sshKey": "[concat(parameters('sshKey'),'\n')]",
         "controllerCount": 3,
         "workerCount": 3,
         "lbID": "[resourceId('Microsoft.Network/loadBalancers','kubernetes-lb')]",
         "frontEndIPConfigID": "[concat(variables('lbID'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]",
         "lbPoolID": "[concat(variables('lbID'),'/backendAddressPools/kubernetes-lb-pool')]",
-        "lbProbeID": "[concat(variables('lbID'),'/probes/kubernetes-apiserver-probe')]"
+        "lbProbeID": "[concat(variables('lbID'),'/probes/kubernetes-apiserver-probe')]",
+        "Contributor": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"
     },
     "functions": [],
     "resources": [
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2015-06-15",
+            "name": "kubernetes-nsg",
+            "location": "[variables('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "kube-allow-api-server",
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "6443-6443",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "kube-allow-ssh",
+                        "properties": {
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "22-22",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 101,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
         {
             "copy": {
                 "name": "controller-ip-copy",
@@ -56,6 +96,9 @@
             "apiVersion": "2018-12-01",
             "name": "kubernetes-vnet",
             "location": "[variables('location')]",
+            "dependsOn": [
+                "Microsoft.Network/networkSecurityGroups/kubernetes-nsg"
+            ],
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -66,7 +109,10 @@
                     {
                         "name": "kubernetes-subnet",
                         "properties": {
-                            "addressPrefix": "10.240.0.0/24"
+                            "addressPrefix": "10.240.0.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'kubernetes-nsg')]"
+                            }
                         }
                     }
                 ]
@@ -257,6 +303,9 @@
                 "[resourceId('Microsoft.Compute/availabilitySets', 'controller-as')]",
                 "[resourceId('Microsoft.Network/networkInterfaces', concat('controller-',copyIndex(),'-nic'))]"
             ],
+            "identity": {
+                "type": "SystemAssigned"
+            },
             "properties": {
                 "availabilitySet": {
                     "id": "[resourceId('Microsoft.Compute/availabilitySets', 'controller-as')]"
@@ -378,6 +427,23 @@
                     ]
                 }
             }
+        },
+        {
+            "copy": {
+                "name": "controller-assignments-copy",
+                "count": "[variables('controllerCount')]"
+            },
+            "apiVersion": "2017-09-01",
+            "type": "Microsoft.Authorization/roleAssignments",
+            "name": "[guid(resourceId('Microsoft.Compute/virtualMachines/', concat('controller-',copyIndex())))]",
+            "properties": {
+                "roleDefinitionId": "[variables(parameters('builtInRoleType'))]",
+                "principalId": "[reference(resourceId('Microsoft.Compute/virtualMachines/', concat('controller-',copyIndex())), '2017-12-01', 'Full').identity.principalId]",
+                "scope": "[resourceGroup().id]"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', concat('controller-',copyIndex()))]"
+            ]
         }
     ],
     "outputs": {}

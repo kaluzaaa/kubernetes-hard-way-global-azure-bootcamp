@@ -1,22 +1,62 @@
 sudo mkdir -p /etc/kubernetes/config
 
+response=$(curl 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F' -H Metadata:true -s)
+tenantId=$(echo $response | python -c 'import sys, json, base64; print (base64.b64decode(json.load(sys.stdin)["access_token"].split(".")[1]))' | python -c 'import sys, json, base64; print (json.load(sys.stdin)["tid"])')
+subscriptionId=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance/compute/subscriptionId?api-version=2017-08-01&format=text")
+location=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance/compute/location?api-version=2017-08-01&format=text")
+
 wget -q --https-only \
   "https://storage.googleapis.com/kubernetes-release/release/v1.14.1/bin/linux/amd64/kube-apiserver" \
   "https://storage.googleapis.com/kubernetes-release/release/v1.14.1/bin/linux/amd64/kube-controller-manager" \
   "https://storage.googleapis.com/kubernetes-release/release/v1.14.1/bin/linux/amd64/kube-scheduler" \
   "https://storage.googleapis.com/kubernetes-release/release/v1.14.1/bin/linux/amd64/kubectl"
 
-  chmod +x kube-apiserver kube-controller-manager kube-scheduler kubectl
-  sudo mv kube-apiserver kube-controller-manager kube-scheduler kubectl /usr/local/bin/
+chmod +x kube-apiserver kube-controller-manager kube-scheduler kubectl
+sudo mv kube-apiserver kube-controller-manager kube-scheduler kubectl /usr/local/bin/
   
 
-   sudo mkdir -p /var/lib/kubernetes/
+sudo mkdir -p /var/lib/kubernetes/
 
-  sudo mv ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
-    service-account-key.pem service-account.pem \
-    encryption-config.yaml /var/lib/kubernetes/
+sudo mv ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
+service-account-key.pem service-account.pem \
+encryption-config.yaml /var/lib/kubernetes/
 
-    INTERNAL_IP=$(ip addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+INTERNAL_IP=$(ip addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+
+cat <<EOF | sudo tee /etc/kubernetes/azure.json
+{
+    "cloud": "AzurePublicCloud",
+    "tenantId": "${tenantId}",
+    "subscriptionId": "${subscriptionId}",
+    "aadClientId": "msi",
+    "aadClientSecret": "msi",
+    "resourceGroup": "kubernetes",
+    "location": "${location}",
+    "vmType": "standard",
+    "subnetName": "kubernetes-subnet",
+    "securityGroupName": "kubernetes-nsg",
+    "vnetName": "kubernetes-vnet",
+    "routeTableName": "kubernetes-routes",
+    "primaryAvailabilitySetName": "worker-as",
+    "cloudProviderBackoff": true,
+    "cloudProviderBackoffRetries": 6,
+    "cloudProviderBackoffExponent": 1.5,
+    "cloudProviderBackoffDuration": 5,
+    "cloudProviderBackoffJitter": 1,
+    "cloudProviderRatelimit": true,
+    "cloudProviderRateLimitQPS": 3,
+    "cloudProviderRateLimitBucket": 10,
+    "useManagedIdentityExtension": true,
+    "userAssignedIdentityID": "",
+    "useInstanceMetadata": true,
+    "loadBalancerSku": "Basic",
+    "excludeMasterFromStandardLB": false,
+    "providerVaultName": "",
+    "maximumLoadBalancerRuleCount": 250,
+    "providerKeyName": "k8s",
+    "providerKeyVersion": ""
+}
+EOF
 
 cat <<EOF | sudo tee /etc/systemd/system/kube-apiserver.service
 [Unit]
@@ -35,6 +75,8 @@ ExecStart=/usr/local/bin/kube-apiserver \\
   --authorization-mode=Node,RBAC \\
   --bind-address=0.0.0.0 \\
   --client-ca-file=/var/lib/kubernetes/ca.pem \\
+  --cloud-provider=azure \\
+  --cloud-config=/etc/kubernetes/azure.json \\
   --enable-admission-plugins=NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \\
   --etcd-cafile=/var/lib/kubernetes/ca.pem \\
   --etcd-certfile=/var/lib/kubernetes/kubernetes.pem \\
@@ -74,6 +116,8 @@ ExecStart=/usr/local/bin/kube-controller-manager \\
   --cluster-name=kubernetes \\
   --cluster-signing-cert-file=/var/lib/kubernetes/ca.pem \\
   --cluster-signing-key-file=/var/lib/kubernetes/ca-key.pem \\
+  --cloud-provider=azure \\
+  --cloud-config=/etc/kubernetes/azure.json \\
   --kubeconfig=/var/lib/kubernetes/kube-controller-manager.kubeconfig \\
   --leader-elect=true \\
   --root-ca-file=/var/lib/kubernetes/ca.pem \\
