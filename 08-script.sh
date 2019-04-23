@@ -4,8 +4,6 @@ sudo mkdir -p /etc/cni/net.d
 sudo mkdir -p /var/lib/kube-proxy
 sudo mkdir -p /opt/cni/bin/
 
-sudo rm -f -r /var/lib/kubelet/kubeconfig
-
 sudo apt-get update
 sudo apt-get -y install socat conntrack ipset
 
@@ -18,12 +16,12 @@ wget -q --https-only \
   https://storage.googleapis.com/kubernetes-release/release/v1.14.1/bin/linux/amd64/kube-proxy \
   https://storage.googleapis.com/kubernetes-release/release/v1.14.1/bin/linux/amd64/kubelet
 
-  sudo mv runc.amd64 runc
-  chmod +x kubectl kube-proxy kubelet runc
-  sudo mv kubectl kube-proxy kubelet runc /usr/local/bin/
-  sudo tar -xvf crictl-v1.14.0-linux-amd64.tar.gz -C /usr/local/bin/
-  sudo tar -xvf cni-plugins-amd64-v0.7.5.tgz -C /opt/cni/bin/
-  sudo tar -xvf containerd-1.2.6.linux-amd64.tar.gz -C /
+sudo mv runc.amd64 runc
+chmod +x kubectl kube-proxy kubelet runc
+sudo mv kubectl kube-proxy kubelet runc /usr/local/bin/
+sudo tar -xvf crictl-v1.14.0-linux-amd64.tar.gz -C /usr/local/bin/
+sudo tar -xvf cni-plugins-amd64-v0.7.5.tgz -C /opt/cni/bin/
+sudo tar -xvf containerd-1.2.6.linux-amd64.tar.gz -C /
 
 POD_CIDR="$(echo $(curl --silent -H Metadata:true "http://169.254.169.254/metadata/instance/compute/tags?api-version=2017-08-01&format=text") | cut -d : -f2)"
 cat <<EOF | sudo tee /etc/cni/net.d/10-bridge.conf
@@ -85,11 +83,11 @@ LimitCORE=infinity
 WantedBy=multi-user.target
 EOF
 
-  sudo mv ${HOSTNAME}-key.pem ${HOSTNAME}.pem /var/lib/kubelet/
-  sudo mv ${HOSTNAME}.kubeconfig /var/lib/kubelet/kubeconfig
-  sudo mv ca.pem /var/lib/kubernetes/
+sudo mv ${HOSTNAME}-key.pem ${HOSTNAME}.pem /var/lib/kubelet/
+sudo mv ${HOSTNAME}.kubeconfig /var/lib/kubelet/kubeconfig
+sudo mv ca.pem /var/lib/kubernetes/
 
-  cat <<EOF | sudo tee /var/lib/kubelet/kubelet-config.yaml
+cat <<EOF | sudo tee /var/lib/kubelet/kubelet-config.yaml
 kind: KubeletConfiguration
 apiVersion: kubelet.config.k8s.io/v1beta1
 authentication:
@@ -161,6 +159,6 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-  sudo systemctl daemon-reload
-  sudo systemctl enable containerd kubelet kube-proxy
-  sudo systemctl start containerd kubelet kube-proxy
+sudo systemctl daemon-reload
+sudo systemctl enable containerd kubelet kube-proxy
+sudo systemctl start containerd kubelet kube-proxy

@@ -4,7 +4,7 @@ kubectl apply -f https://storage.googleapis.com/kubernetes-the-hard-way/coredns.
 
 sleep 20
 
-kubectl get pods -l k8s-app=kube-dns -n kube-system
+kubectl get pods -l k8s-app=kube-dns -n kube-system -o wide
 
 kubectl run --generator=run-pod/v1 busybox --image=busybox:1.28 --command -- sleep 3600
 

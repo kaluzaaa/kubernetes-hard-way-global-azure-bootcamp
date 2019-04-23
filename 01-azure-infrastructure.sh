@@ -2,7 +2,7 @@
 
 echo "Creating resource group..."
 
-az group create -n kubernetes -l eastus
+az group create -n kubernetes -l westeurope
 
 echo "Deploying infrastructure..."
 
