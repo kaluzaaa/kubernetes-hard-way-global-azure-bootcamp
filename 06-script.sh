@@ -1,3 +1,5 @@
+#!/bin/bash
+
 sudo mkdir -p /etc/kubernetes/config
 
 response=$(curl 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F' -H Metadata:true -s)
@@ -13,7 +15,6 @@ wget -q --https-only \
 
 chmod +x kube-apiserver kube-controller-manager kube-scheduler kubectl
 sudo mv kube-apiserver kube-controller-manager kube-scheduler kubectl /usr/local/bin/
-  
 
 sudo mkdir -p /var/lib/kubernetes/
 
@@ -36,7 +37,6 @@ cat <<EOF | sudo tee /etc/kubernetes/azure.json
     "subnetName": "kubernetes-subnet",
     "securityGroupName": "kubernetes-nsg",
     "vnetName": "kubernetes-vnet",
-    "routeTableName": "kubernetes-routes",
     "primaryAvailabilitySetName": "worker-as",
     "cloudProviderBackoff": true,
     "cloudProviderBackoffRetries": 6,
@@ -159,8 +159,6 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-  sudo systemctl daemon-reload
-  sudo systemctl enable kube-apiserver kube-controller-manager kube-scheduler
-  sudo systemctl start kube-apiserver kube-controller-manager kube-scheduler
-
-  
+sudo systemctl daemon-reload
+sudo systemctl enable kube-apiserver kube-controller-manager kube-scheduler
+sudo systemctl start kube-apiserver kube-controller-manager kube-scheduler

@@ -1,4 +1,5 @@
 #!/bin/bash
+
 start=`date +%s`
 
 bash 01-azure-infrastructure.sh

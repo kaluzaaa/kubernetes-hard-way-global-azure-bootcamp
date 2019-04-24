@@ -1,3 +1,5 @@
+#!/bin/bash
+
 sudo mkdir -p /var/lib/kubernetes
 sudo mkdir -p /var/lib/kubelet
 sudo mkdir -p /etc/cni/net.d

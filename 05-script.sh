@@ -1,13 +1,15 @@
+#!/bin/bash
+
 wget -q --https-only \
   "https://github.com/coreos/etcd/releases/download/v3.3.10/etcd-v3.3.10-linux-amd64.tar.gz"
 
-  tar -xvf etcd-v3.3.10-linux-amd64.tar.gz
-  sudo mv etcd-v3.3.10-linux-amd64/etcd* /usr/local/bin/
+tar -xvf etcd-v3.3.10-linux-amd64.tar.gz
+sudo mv etcd-v3.3.10-linux-amd64/etcd* /usr/local/bin/
 
-  sudo mkdir -p /etc/etcd /var/lib/etcd
-  sudo cp ca.pem kubernetes-key.pem kubernetes.pem /etc/etcd/
+sudo mkdir -p /etc/etcd /var/lib/etcd
+sudo cp ca.pem kubernetes-key.pem kubernetes.pem /etc/etcd/
 
-  INTERNAL_IP=$(ip addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+INTERNAL_IP=$(ip addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
 
 ETCD_NAME=$(hostname -s)
 
@@ -44,12 +46,6 @@ EOF
 
 sudo mv etcd.service /etc/systemd/system/
 
-  sudo systemctl daemon-reload
-  sudo systemctl enable etcd
-  sudo systemctl start etcd
-
-sudo ETCDCTL_API=3 etcdctl member list \
-  --endpoints=https://${INTERNAL_IP}:2379 \
-  --cacert=/etc/etcd/ca.pem \
-  --cert=/etc/etcd/kubernetes.pem \
-  --key=/etc/etcd/kubernetes-key.pem
+sudo systemctl daemon-reload
+sudo systemctl enable etcd
+sudo systemctl start etcd

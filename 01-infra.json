@@ -25,7 +25,6 @@
         "lbProbeID": "[concat(variables('lbID'),'/probes/kubernetes-apiserver-probe')]",
         "Contributor": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"
     },
-    "functions": [],
     "resources": [
         {
             "type": "Microsoft.Network/networkSecurityGroups",
@@ -445,6 +444,5 @@
                 "[concat('Microsoft.Compute/virtualMachines/', concat('controller-',copyIndex()))]"
             ]
         }
-    ],
-    "outputs": {}
+    ]
 }
