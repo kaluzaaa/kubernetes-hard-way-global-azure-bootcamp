@@ -49,3 +49,9 @@ sudo mv etcd.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable etcd
 sudo systemctl start etcd
+
+sudo ETCDCTL_API=3 etcdctl member list \
+  --endpoints=https://${INTERNAL_IP}:2379 \
+  --cacert=/etc/etcd/ca.pem \
+  --cert=/etc/etcd/kubernetes.pem \
+  --key=/etc/etcd/kubernetes-key.pem'
