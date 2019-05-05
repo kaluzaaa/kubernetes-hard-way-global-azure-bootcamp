@@ -12,6 +12,7 @@ bash 07-kubelet-node-authorization.sh
 bash 08-bootstrapping-kubernetes-workers.sh
 bash 09-configuring-kubectl.sh
 bash 10-pod-network-routes.sh
-bash 11-smoke-test.sh
+bash 11-dns.sh
+bash 12-smoke-test.sh
 
 echo "Duration: $((($(date +%s)-$start)/60)) minutes"
